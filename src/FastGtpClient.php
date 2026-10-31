@@ -10,7 +10,7 @@ use Psr\Http\Client\ClientInterface;
 use UnexpectedValueException;
 
 /**
- * A client for a fastgtp server, and where Session handles come from.
+ * A client for a fastgtp server, and where Session and KataGo handles come from.
  *
  * A failed request throws FastGtpException. An empty, "." or ".." id throws
  * InvalidArgumentException. The constructor throws php-http/discovery's
@@ -51,6 +51,21 @@ final class FastGtpClient
 
             return new Session($this->transporter, $id);
         });
+    }
+
+    /** @return list<KataGo> The KataGos the server runs. */
+    public function katagos(): array
+    {
+        return $this->transporter->read('GET', '/katago', null, fn(array $data) => array_map(
+            fn(array $item) => new KataGo($this->transporter, (new Fields($item))->string('id')),
+            (new Fields($data))->objects('items'),
+        ));
+    }
+
+    /** The KataGo with this name, such as "default". Sends nothing. */
+    public function katago(string $name): KataGo
+    {
+        return new KataGo($this->transporter, $name);
     }
 
     /** The session with this id, for example one kept from an earlier request. Sends nothing. */

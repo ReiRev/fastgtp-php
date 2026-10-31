@@ -51,6 +51,22 @@ final class Fields
         return $value;
     }
 
+    /** @return list<array<string, mixed>> A list of objects, kept as arrays. */
+    public function objects(string $key): array
+    {
+        $value = $this->data[$key] ?? null;
+        if (!is_array($value) || !array_is_list($value)) {
+            throw self::bad($key);
+        }
+        foreach ($value as $item) {
+            if (!is_array($item) || ($item !== [] && array_is_list($item))) {
+                throw self::bad($key);
+            }
+        }
+
+        return $value;
+    }
+
     public function object(string $key): self
     {
         $value = $this->data[$key] ?? null;

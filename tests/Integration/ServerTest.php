@@ -19,8 +19,8 @@ use PHPUnit\Framework\TestCase;
  *
  * SpecCheckingHttp throws on any response that does not match the spec.
  *
- * The KataGo tests send requests through HttpTransporter until the client
- * has KataGo classes.
+ * The analysis tests send requests through HttpTransporter until the client
+ * has Query classes.
  */
 final class ServerTest extends TestCase
 {
@@ -82,12 +82,24 @@ final class ServerTest extends TestCase
         }
     }
 
+    public function testKataGo(): void
+    {
+        $this->assertContains(self::$katago, array_map(fn($k) => $k->name, self::$client->katagos()));
+        $katago = self::$client->katago(self::$katago);
+        $this->assertNotSame('', $katago->version()->version);
+        $this->assertNotEmpty($katago->models());
+        try {
+            self::$client->katago('no-such-katago')->version();
+            $this->fail('An unknown KataGo was found');
+        } catch (FastGtpException $e) {
+            $this->assertTrue($e->is('katago-not-found'));
+        }
+    }
+
     public function testKataGoAnalysis(): void
     {
         $t = self::$transporter;
         $katago = '/katago/' . self::$katago;
-        $this->assertContains(['id' => self::$katago], $t->json('GET', '/katago')['items']);
-        $this->assertNotSame('', $t->json('GET', "$katago/version")['version']);
 
         $query = $t->json('POST', "$katago/queries", self::GAME + [
             'moves' => [['B', 'E5'], ['W', 'C3']],
