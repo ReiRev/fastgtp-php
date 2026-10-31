@@ -6,6 +6,8 @@ A PHP client for [fastgtp](https://github.com/ReiRev/fastgtp), an HTTP API for G
 
 - `src/HttpTransporter.php`: internal; sends the requests and turns a failed request, including the HTTP client's own exceptions, into `FastGtpException`.
 - `tests/Unit/`: tests against a fake PSR-18 client (`FakeHttp`).
+- `tests/Integration/`: tests against a running fastgtp server with GNU Go and KataGo. `SpecCheckingHttp` checks every response against the server's `/openapi.json`.
+- `tests/server/`: a Docker image of that server, with a fixed fastgtp commit and KataGo's CPU build. CI uses it too.
 
 ## Commands
 
@@ -13,6 +15,9 @@ A PHP client for [fastgtp](https://github.com/ReiRev/fastgtp), an HTTP API for G
 composer update
 composer test
 composer format-check
+docker compose -f tests/server/compose.yaml up -d --build --wait
+FASTGTP_URL=http://127.0.0.1:8000 composer test-integration
+docker compose -f tests/server/compose.yaml down
 ```
 
 ## Rules
