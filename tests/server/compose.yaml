@@ -5,6 +5,7 @@
 #     docker compose -f tests/server/compose.yaml down
 #
 # Set FASTGTP_PORT to use another port on the host.
+name: fastgtp-php-integration
 services:
   fastgtp:
     build: .
