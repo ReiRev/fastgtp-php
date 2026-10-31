@@ -100,7 +100,7 @@ try {
 }
 ```
 
-Errors from the HTTP client itself, such as a refused connection, are thrown as they are.
+A response with a status outside 2xx, such as a proxy's redirect to its login page, is a `ProblemException` too, and so is a body that is not JSON, which keeps its 2xx status. Errors from the HTTP client itself, such as a refused connection, are thrown as they are. An empty, `.` or `..` id throws `InvalidArgumentException`.
 
 ## Development
 

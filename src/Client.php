@@ -22,6 +22,8 @@ use Psr\Http\Message\StreamFactoryInterface;
  * query and waits for it. Error responses, any status outside 2xx, and a
  * body that is not JSON are thrown as ProblemException. Errors from the
  * HTTP client itself, such as a refused connection, are thrown as they are.
+ * A body that is not JSON keeps its status, so a ProblemException can carry
+ * a 2xx status. An empty, "." or ".." id throws InvalidArgumentException.
  */
 final class Client
 {

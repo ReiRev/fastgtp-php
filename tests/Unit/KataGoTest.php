@@ -109,6 +109,12 @@ final class KataGoTest extends TestCase
         $http->client()->analyze('default', self::QUERY, 1.0);
     }
 
+    public function testIdsThatWouldChangeThePath(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        (new FakeHttp())->client()->getQuery('default', '..');
+    }
+
     public function testQueueFull(): void
     {
         $http = (new FakeHttp())->answer(503, [
