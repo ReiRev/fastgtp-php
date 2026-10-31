@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FastGtp;
 
+use Closure;
 use InvalidArgumentException;
 use JsonException;
 use TypeError;
@@ -24,15 +25,29 @@ final class HttpTransporter
 {
     private readonly string $baseUri;
 
-    /** @param array<string, string> $headers */
+    /** @var Closure(float): void */
+    private readonly Closure $sleep;
+
+    /**
+     * @param array<string, string> $headers
+     * @param (Closure(float): void)|null $sleep Waits between polls; tests pass one that does not.
+     */
     public function __construct(
         string $baseUri,
         private readonly ClientInterface $http,
         private readonly RequestFactoryInterface $requests,
         private readonly StreamFactoryInterface $streams,
         private readonly array $headers = [],
+        ?Closure $sleep = null,
     ) {
         $this->baseUri = rtrim($baseUri, '/');
+        $this->sleep = $sleep ?? static fn(float $seconds) => usleep((int) ($seconds * 1_000_000));
+    }
+
+    /** Wait before reading a query again. */
+    public function sleep(float $seconds): void
+    {
+        ($this->sleep)($seconds);
     }
 
     /** An id as one path segment. */
@@ -61,7 +76,8 @@ final class HttpTransporter
      *
      * @template T
      * @param array<string, mixed>|null $body
-     * @param callable(array<string, mixed>): T $make Throws UnexpectedValueException on a bad field,
+     * @param callable(array<string, mixed>, ResponseInterface): T $make Gets the JSON object, and the
+     *     response for its headers. Throws UnexpectedValueException on a bad field,
      *     usually from Fields. A TypeError or ValueError from a value it did not check counts as one too.
      * @return T
      */
@@ -69,7 +85,7 @@ final class HttpTransporter
     {
         [$data, $response] = $this->jsonAndResponse($method, $path, $body);
         try {
-            return $make($data);
+            return $make($data, $response);
         } catch (UnexpectedValueException|TypeError|ValueError $e) {
             throw new FastGtpException($e->getMessage(), $response->getStatusCode(), previous: $e);
         }

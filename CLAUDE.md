@@ -4,7 +4,7 @@ A PHP client for [fastgtp](https://github.com/ReiRev/fastgtp), an HTTP API for G
 
 ## Layout
 
-- `src/FastGtpClient.php`: the entry point. It finds a PSR-18 client when none is given, creates sessions and hands out `Session` and `KataGo` handles, which hold an id and send one request per method.
+- `src/FastGtpClient.php`: the entry point. It finds a PSR-18 client when none is given, creates sessions and hands out `Session` and `KataGo` handles (and `KataGo` hands out `Query` handles), which hold an id and send one request per method.
 - `src/`: also the read-only value classes the handles return, such as `Board` and `Move`.
 - `src/HttpTransporter.php`: internal; sends the requests and turns a failed request, including the HTTP client's own exceptions, into `FastGtpException`.
 - `src/KataGo/`: the classes for fastgtp's KataGo extension, in the `FastGtp\KataGo` namespace.

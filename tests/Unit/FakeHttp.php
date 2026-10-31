@@ -19,6 +19,9 @@ final class FakeHttp implements ClientInterface
     /** @var list<RequestInterface> */
     public array $requests = [];
 
+    /** @var list<float> Seconds the transporter was asked to sleep, which it did not. */
+    public array $sleeps = [];
+
     /** @param list<ResponseInterface|ClientExceptionInterface> $responses */
     public function __construct(private array $responses = []) {}
 
@@ -66,7 +69,9 @@ final class FakeHttp implements ClientInterface
     {
         $factory = new HttpFactory();
 
-        return new HttpTransporter('http://fastgtp.test/', $this, $factory, $factory, $headers);
+        return new HttpTransporter('http://fastgtp.test/', $this, $factory, $factory, $headers, function (float $s): void {
+            $this->sleeps[] = $s;
+        });
     }
 
     /** @return array<string, mixed>|null */
