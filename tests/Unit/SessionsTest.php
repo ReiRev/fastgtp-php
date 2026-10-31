@@ -111,6 +111,38 @@ final class SessionsTest extends TestCase
         }
     }
 
+    public function testRedirectIsNotSuccess(): void
+    {
+        // As from a proxy that sends clients without credentials to log in.
+        $http = (new FakeHttp())->answer(302, null, ['Location' => '/login']);
+        try {
+            $http->client()->deleteSession('s');
+            $this->fail('No exception');
+        } catch (ProblemException $e) {
+            $this->assertSame(302, $e->status);
+        }
+    }
+
+    public function testSuccessThatIsNotJson(): void
+    {
+        $http = (new FakeHttp())->answer(200, '<html>Log in</html>');
+        $this->expectException(ProblemException::class);
+        $http->client()->getSession('s');
+    }
+
+    public function testIdsThatWouldChangeThePath(): void
+    {
+        $client = (new FakeHttp())->client();
+        foreach (['', '.', '..'] as $id) {
+            try {
+                $client->getSession($id);
+                $this->fail("\"$id\" was accepted");
+            } catch (\InvalidArgumentException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
+
     public function testErrorThatIsNotAProblem(): void
     {
         // For example a proxy's own error page.

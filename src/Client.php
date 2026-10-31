@@ -6,6 +6,7 @@ namespace FastGtp;
 
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Psr7\HttpFactory;
+use InvalidArgumentException;
 use JsonException;
 use LogicException;
 use Psr\Http\Client\ClientInterface;
@@ -16,9 +17,10 @@ use Psr\Http\Message\StreamFactoryInterface;
 /**
  * A client for a fastgtp server.
  *
- * Every method sends one request. Error responses are thrown as
- * ProblemException. Errors from the HTTP client itself, such as a refused
- * connection, are thrown as they are.
+ * Every method sends one request. Error responses, any status outside 2xx,
+ * and a body that is not JSON are thrown as ProblemException. Errors from
+ * the HTTP client itself, such as a refused connection, are thrown as they
+ * are.
  */
 final class Client
 {
@@ -122,7 +124,18 @@ final class Client
 
     private function session(string $sessionId): string
     {
-        return '/sessions/' . rawurlencode($sessionId);
+        return '/sessions/' . self::segment($sessionId);
+    }
+
+    private static function segment(string $id): string
+    {
+        // URL handling would drop "." and "..", and an empty id would leave
+        // an empty segment, so each would reach another route.
+        if ($id === '' || $id === '.' || $id === '..') {
+            throw new InvalidArgumentException("Not a valid id: \"$id\"");
+        }
+
+        return rawurlencode($id);
     }
 
     /** @param array<string, mixed>|null $body */
@@ -153,11 +166,18 @@ final class Client
         $response = $this->http->sendRequest($request);
         $status = $response->getStatusCode();
         $text = (string) $response->getBody();
-        if ($status >= 400) {
+        // A PSR-18 client does not follow redirects. A proxy that sends a
+        // client without credentials to its login page answers 3xx, and
+        // that must not pass for success.
+        if ($status < 200 || $status >= 300) {
             throw $this->problem($response, $text);
         }
 
-        $decoded = $text === '' ? null : json_decode($text, true, flags: JSON_THROW_ON_ERROR);
+        try {
+            $decoded = $text === '' ? null : json_decode($text, true, flags: JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            throw new ProblemException($status, 'about:blank', 'The response is not JSON');
+        }
 
         return [$decoded, $response];
     }
