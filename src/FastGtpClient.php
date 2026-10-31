@@ -17,7 +17,7 @@ use UnexpectedValueException;
  * NotFoundException when no PSR-18 client is given or installed, or when no
  * PSR-17 factory is installed. Guzzle provides both.
  */
-final class Client
+final class FastGtpClient
 {
     private readonly HttpTransporter $transporter;
 

@@ -7,13 +7,13 @@ namespace FastGtp;
 /**
  * One engine process on the server. Each method sends one request.
  *
- * Keep $id to come back to the session later with Client::session().
+ * Keep $id to come back to the session later with FastGtpClient::session().
  */
 final class Session
 {
     private readonly string $path;
 
-    /** @internal Use Client::createSession() or Client::session(). */
+    /** @internal Use FastGtpClient::createSession() or FastGtpClient::session(). */
     public function __construct(
         private readonly HttpTransporter $transporter,
         public readonly string $id,
@@ -21,9 +21,14 @@ final class Session
         $this->path = '/sessions/' . HttpTransporter::segment($id);
     }
 
-    public function info(): SessionInfo
+    /** The engine this session runs. */
+    public function engine(): Engine
     {
-        return $this->transporter->read('GET', $this->path, null, SessionInfo::fromArray(...));
+        return $this->transporter->read('GET', $this->path, null, function (array $data): Engine {
+            (new Fields($data))->object('engine');
+
+            return Engine::fromArray($data['engine']);
+        });
     }
 
     public function board(): Board

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace FastGtp\Tests\Integration;
 
-use FastGtp\Client;
+use FastGtp\FastGtpClient;
 use FastGtp\Color;
 use FastGtp\FastGtpException;
 use FastGtp\HttpTransporter;
@@ -28,7 +28,7 @@ final class ServerTest extends TestCase
 
     private static SpecCheckingHttp $http;
 
-    private static Client $client;
+    private static FastGtpClient $client;
 
     private static HttpTransporter $transporter;
 
@@ -44,7 +44,7 @@ final class ServerTest extends TestCase
         $spec = json_decode((string) $guzzle->get(rtrim($url, '/') . '/openapi.json')->getBody(), true);
         self::$http = new SpecCheckingHttp($guzzle, $spec);
         $factory = new HttpFactory();
-        self::$client = new Client($url, self::$http);
+        self::$client = new FastGtpClient($url, self::$http);
         self::$transporter = new HttpTransporter($url, self::$http, $factory, $factory);
         self::$katago = getenv('FASTGTP_KATAGO') ?: 'default';
     }
@@ -55,7 +55,7 @@ final class ServerTest extends TestCase
         try {
             // A handle made from the id reaches the same session.
             $again = self::$client->session($session->id);
-            $this->assertSame($session->id, $again->info()->id);
+            $this->assertSame('GNU Go', $again->engine()->name);
             $this->assertSame(9, $session->setBoard(9, 6.5)->size);
             $this->assertSame('E5', $session->play(Color::Black, 'E5')->vertex);
             try {
@@ -75,7 +75,7 @@ final class ServerTest extends TestCase
             $session->delete();
         }
         try {
-            $session->info();
+            $session->engine();
             $this->fail('The session was not deleted');
         } catch (FastGtpException $e) {
             $this->assertTrue($e->is('session-not-found'));

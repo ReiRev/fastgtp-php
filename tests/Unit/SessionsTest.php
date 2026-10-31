@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace FastGtp\Tests\Unit;
 
-use FastGtp\Client;
+use FastGtp\FastGtpClient;
 use FastGtp\Color;
 use FastGtp\FastGtpException;
 use PHPUnit\Framework\TestCase;
@@ -31,7 +31,7 @@ final class SessionsTest extends TestCase
     public function testHttpClientIsFoundWhenNotGiven(): void
     {
         // Guzzle is installed for development, so discovery finds it.
-        $this->assertSame('abc', (new Client('http://fastgtp.test'))->session('abc')->id);
+        $this->assertSame('abc', (new FastGtpClient('http://fastgtp.test'))->session('abc')->id);
     }
 
     public function testSessionFromIdSendsNothingUntilUsed(): void
@@ -40,10 +40,9 @@ final class SessionsTest extends TestCase
         $session = $http->client()->session('abc');
         $this->assertSame([], $http->requests);
 
-        $info = $session->info();
-        $this->assertSame('abc', $info->id);
-        $this->assertSame('GNU Go', $info->engine->name);
-        $this->assertSame('2', $info->engine->protocolVersion);
+        $engine = $session->engine();
+        $this->assertSame('GNU Go', $engine->name);
+        $this->assertSame('2', $engine->protocolVersion);
         $this->assertSame('/sessions/abc', $http->requests[0]->getUri()->getPath());
     }
 
@@ -122,7 +121,7 @@ final class SessionsTest extends TestCase
             fn() => $session->board(),
             fn() => $session->play(Color::Black, 'E5'),
             fn() => $session->play(Color::Black, 'E5'),
-            fn() => $session->info(),
+            fn() => $session->engine(),
             fn() => $client->createSession(),
         ];
         foreach ($calls as $i => $call) {
