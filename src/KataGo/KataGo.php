@@ -6,6 +6,7 @@ namespace FastGtp\KataGo;
 
 use FastGtp\Fields;
 use FastGtp\HttpTransporter;
+use Psr\Http\Message\ResponseInterface;
 
 /**
  * One KataGo analysis engine on the server. Each method sends one request,
@@ -56,7 +57,12 @@ final class KataGo
             'POST',
             $this->path . '/queries',
             $query,
-            fn(array $data) => new Query($this->transporter, $this->path, (new Fields($data))->id('id')),
+            fn(array $data, ResponseInterface $response) => new Query(
+                $this->transporter,
+                $this->path,
+                (new Fields($data))->id('id'),
+                HttpTransporter::retryAfter($response),
+            ),
         );
     }
 

@@ -79,7 +79,8 @@ final class QueriesTest extends TestCase
 
         $this->assertSame(QueryStatus::Failed, $result->status);
         $this->assertSame('moves', $result->error['field']);
-        $this->assertSame([2.0, 1.0], $http->sleeps);
+        // The wait asked for by the 201 comes before the first read.
+        $this->assertSame([2.0, 2.0, 1.0], $http->sleeps);
         $this->assertSame('GET', $http->requests[3]->getMethod());
     }
 
@@ -102,6 +103,21 @@ final class QueriesTest extends TestCase
         $this->assertEqualsWithDelta([1.0, 0.5], $http->sleeps, 0.01);
         $this->assertSame('DELETE', $http->requests[3]->getMethod());
         $this->assertSame('/katago/default/queries/q1', $http->requests[3]->getUri()->getPath());
+    }
+
+    public function testTimeoutKeepsAFailedDelete(): void
+    {
+        $http = (new FakeHttp())
+            ->answer(200, self::query('RUNNING'), ['Retry-After' => '5'])
+            ->answer(200, self::query('RUNNING'), ['Retry-After' => '5'])
+            ->answer(502, '<html>Bad gateway</html>');
+        try {
+            self::katago($http)->query('q1')->wait(1.0);
+            $this->fail('No exception');
+        } catch (TimeoutException $e) {
+            $this->assertNull($e->status);
+            $this->assertSame(502, $e->getPrevious()->status);
+        }
     }
 
     public function testWaitReturnsAQueryThatFinishesAtTheDeadline(): void

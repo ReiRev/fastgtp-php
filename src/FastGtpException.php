@@ -15,7 +15,8 @@ use Throwable;
  * details, whose types are listed in fastgtp's docs/problems.md. Use is() to
  * tell them apart, for example is('illegal-move'). When no response arrived,
  * such as a refused connection, $status is null and getPrevious() holds the
- * HTTP client's exception.
+ * HTTP client's exception. KataGo\TimeoutException, a subclass, has a null
+ * $status too.
  */
 class FastGtpException extends RuntimeException
 {
