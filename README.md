@@ -142,7 +142,7 @@ composer test
 composer format-check
 ```
 
-The integration tests run against a real server. `tests/server` builds one in Docker, with GNU Go, KataGo's CPU build and a fixed fastgtp commit:
+The integration tests run against a real server. `tests/server` builds one in Docker, with GNU Go, KataGo's CPU build and a fixed fastgtp release from PyPI:
 
 ```bash
 docker compose -f tests/server/compose.yaml up -d --build --wait

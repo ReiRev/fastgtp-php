@@ -11,7 +11,7 @@ A PHP client for [fastgtp](https://github.com/ReiRev/fastgtp), an HTTP API for G
 - `src/Fields.php`: internal; reads response fields and refuses a missing or mistyped one, which becomes `FastGtpException`.
 - `tests/Unit/`: tests against a fake PSR-18 client (`FakeHttp`).
 - `tests/Integration/`: tests against a running fastgtp server with GNU Go and KataGo. `SpecCheckingHttp` checks every response against the server's `/openapi.json`.
-- `tests/server/`: a Docker image of that server, with a fixed fastgtp commit and KataGo's CPU build. CI uses it too.
+- `tests/server/`: a Docker image of that server, with a fixed fastgtp release from PyPI and KataGo's CPU build. CI uses it too.
 
 ## Commands
 
