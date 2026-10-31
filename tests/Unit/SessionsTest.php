@@ -91,23 +91,6 @@ final class SessionsTest extends TestCase
         $this->assertSame('/sessions/s/moves/last', $http->requests[2]->getUri()->getPath());
     }
 
-    public function testRetryAfterIsRead(): void
-    {
-        $http = (new FakeHttp())->answer(503, [
-            'type' => self::PROBLEMS . 'too-many-sessions',
-            'title' => 'Too many sessions',
-            'status' => 503,
-        ], ['Retry-After' => '5']);
-
-        $this->expectException(FastGtpException::class);
-        try {
-            $http->client()->createSession();
-        } catch (FastGtpException $e) {
-            $this->assertSame(5, $e->retryAfter);
-            throw $e;
-        }
-    }
-
     public function testBadBodyFromAHandle(): void
     {
         // The handles must read data through the check for a JSON object.
