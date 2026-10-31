@@ -7,9 +7,8 @@ namespace FastGtp\Tests\Integration;
 use FastGtp\FastGtpClient;
 use FastGtp\Color;
 use FastGtp\FastGtpException;
-use FastGtp\HttpTransporter;
+use FastGtp\KataGo\QueryStatus;
 use GuzzleHttp\Client as GuzzleClient;
-use GuzzleHttp\Psr7\HttpFactory;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -18,9 +17,6 @@ use PHPUnit\Framework\TestCase;
  * starts one with GNU Go and KataGo's CPU build.
  *
  * SpecCheckingHttp throws on any response that does not match the spec.
- *
- * The analysis tests send requests through HttpTransporter until the client
- * has Query classes.
  */
 final class ServerTest extends TestCase
 {
@@ -29,8 +25,6 @@ final class ServerTest extends TestCase
     private static SpecCheckingHttp $http;
 
     private static FastGtpClient $client;
-
-    private static HttpTransporter $transporter;
 
     private static string $katago;
 
@@ -43,9 +37,7 @@ final class ServerTest extends TestCase
         $guzzle = new GuzzleClient(['timeout' => 60, 'http_errors' => false]);
         $spec = json_decode((string) $guzzle->get(rtrim($url, '/') . '/openapi.json')->getBody(), true);
         self::$http = new SpecCheckingHttp($guzzle, $spec);
-        $factory = new HttpFactory();
         self::$client = new FastGtpClient($url, self::$http);
-        self::$transporter = new HttpTransporter($url, self::$http, $factory, $factory);
         self::$katago = getenv('FASTGTP_KATAGO') ?: 'default';
     }
 
@@ -98,42 +90,46 @@ final class ServerTest extends TestCase
 
     public function testKataGoAnalysis(): void
     {
-        $t = self::$transporter;
-        $katago = '/katago/' . self::$katago;
-
-        $query = $t->json('POST', "$katago/queries", self::GAME + [
+        $katago = self::$client->katago(self::$katago);
+        $result = $katago->analyze(self::GAME + [
             'moves' => [['B', 'E5'], ['W', 'C3']],
             'analyzeTurns' => [0, 2],
             'maxVisits' => 10,
-        ]);
-        $deadline = microtime(true) + 120;
-        while (!in_array($query['status'], ['SUCCEEDED', 'FAILED'], true) && microtime(true) < $deadline) {
-            usleep(200_000);
-            $query = $t->json('GET', "$katago/queries/{$query['id']}");
-        }
+        ], 120);
 
-        $this->assertSame('SUCCEEDED', $query['status'], json_encode($query['error'] ?? null));
-        $this->assertSame([0, 2], array_column($query['responses'], 'turnNumber'));
+        $this->assertSame(QueryStatus::Succeeded, $result->status, json_encode($result->error));
+        $this->assertSame([0, 2], array_column($result->responses, 'turnNumber'));
         // KataGo's numbers change from run to run, so check only their range.
-        foreach ($query['responses'] as $response) {
+        foreach ($result->responses as $response) {
             $this->assertGreaterThanOrEqual(0.0, $response['rootInfo']['winrate']);
             $this->assertLessThanOrEqual(1.0, $response['rootInfo']['winrate']);
             $this->assertNotEmpty($response['moveInfos']);
         }
+        $this->assertNotNull($result->finishedAt);
     }
 
     public function testKataGoRejectsAnIllegalMove(): void
     {
-        $t = self::$transporter;
-        $katago = '/katago/' . self::$katago;
-        $query = $t->json('POST', "$katago/queries", self::GAME + ['moves' => [['B', 'E5'], ['W', 'E5']]]);
-        $deadline = microtime(true) + 60;
-        while (!in_array($query['status'], ['SUCCEEDED', 'FAILED'], true) && microtime(true) < $deadline) {
-            usleep(200_000);
-            $query = $t->json('GET', "$katago/queries/{$query['id']}");
-        }
+        $result = self::$client->katago(self::$katago)->analyze(self::GAME + ['moves' => [['B', 'E5'], ['W', 'E5']]], 60);
 
-        $this->assertSame('FAILED', $query['status']);
-        $this->assertSame('moves', $query['error']['field']);
+        $this->assertSame(QueryStatus::Failed, $result->status);
+        $this->assertSame('moves', $result->error['field']);
+    }
+
+    public function testQueryFromIdAndDelete(): void
+    {
+        $katago = self::$client->katago(self::$katago);
+        $id = $katago->createQuery(self::GAME + ['moves' => [], 'maxVisits' => 10])->id;
+
+        // A handle made from the id reaches the same query.
+        $query = $katago->query($id);
+        $this->assertSame($id, $query->wait(60)->id);
+        $query->delete();
+        try {
+            $query->get();
+            $this->fail('The query was not deleted');
+        } catch (FastGtpException $e) {
+            $this->assertTrue($e->is('query-not-found'));
+        }
     }
 }
