@@ -143,9 +143,16 @@ final class SessionsTest extends TestCase
 
     public function testEmptySuccessWhereDataIsExpected(): void
     {
-        $http = (new FakeHttp())->answer(200);
-        $this->expectException(ProblemException::class);
-        $http->client()->session('s')->board();
+        $http = (new FakeHttp())->answer(200)->answer(200, [1, 2]);
+        $session = $http->client()->session('s');
+        foreach ([1, 2] as $_) {
+            try {
+                $session->board();
+                $this->fail('No exception');
+            } catch (ProblemException $e) {
+                $this->assertSame(200, $e->status);
+            }
+        }
     }
 
     public function testIdsThatWouldChangeThePath(): void

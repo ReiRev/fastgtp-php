@@ -75,7 +75,8 @@ final class Http
     public function jsonAndResponse(string $method, string $path, ?array $body = null): array
     {
         [$decoded, $response] = $this->send($method, $path, $body);
-        if (!is_array($decoded)) {
+        // "{}" decodes to [], so only a non-empty list is not an object.
+        if (!is_array($decoded) || ($decoded !== [] && array_is_list($decoded))) {
             throw new ProblemException($response->getStatusCode(), 'about:blank', 'The response is not a JSON object');
         }
 
