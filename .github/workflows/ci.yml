@@ -21,3 +21,40 @@ jobs:
       - run: composer format-check
       - run: composer test
 
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+        with:
+          repository: ReiRev/fastgtp
+          path: fastgtp-server
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install GNU Go and fastgtp
+        run: |
+          sudo apt-get update && sudo apt-get install -y gnugo
+          pipx install poetry
+          cd fastgtp-server && poetry install --no-interaction
+      - name: Start fastgtp with GNU Go and its fake analysis engine
+        working-directory: fastgtp-server
+        run: |
+          cat > katago.toml <<TOML
+          [katago.default]
+          command = ["$(poetry run which python)", "$PWD/tests/analysis/fake_analysis.py"]
+          configs = ["analysis.cfg"]
+          model = "fake.bin.gz"
+          TOML
+          FASTGTP_ENGINE="/usr/games/gnugo --mode gtp" FASTGTP_KATAGO_CONFIG=katago.toml \
+            nohup poetry run uvicorn fastgtp.server.main:app --port 8000 > ../fastgtp.log 2>&1 &
+          for i in $(seq 60); do curl -sf localhost:8000/katago > /dev/null && exit 0; sleep 1; done
+          cat ../fastgtp.log; exit 1
+      - run: composer update --no-interaction --no-progress
+      - run: composer test-integration
+        env:
+          FASTGTP_URL: http://127.0.0.1:8000

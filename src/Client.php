@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FastGtp;
 
+use Closure;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Psr7\HttpFactory;
 use InvalidArgumentException;
@@ -17,18 +18,22 @@ use Psr\Http\Message\StreamFactoryInterface;
 /**
  * A client for a fastgtp server.
  *
- * Every method sends one request. Error responses, any status outside 2xx,
- * and a body that is not JSON are thrown as ProblemException. Errors from
- * the HTTP client itself, such as a refused connection, are thrown as they
- * are.
+ * Every method sends one request, except analyze(), which sends a KataGo
+ * query and waits for it. Error responses, any status outside 2xx, and a
+ * body that is not JSON are thrown as ProblemException. Errors from the
+ * HTTP client itself, such as a refused connection, are thrown as they are.
  */
 final class Client
 {
     private readonly string $baseUri;
 
+    /** @var Closure(float): void */
+    private readonly Closure $sleep;
+
     /**
      * @param array<string, string> $headers Sent with every request, for example
      *     the credentials of a proxy in front of the server.
+     * @param (Closure(float): void)|null $sleep Waits for the given seconds.
      */
     public function __construct(
         string $baseUri,
@@ -36,8 +41,10 @@ final class Client
         private readonly RequestFactoryInterface $requests,
         private readonly StreamFactoryInterface $streams,
         private readonly array $headers = [],
+        ?Closure $sleep = null,
     ) {
         $this->baseUri = rtrim($baseUri, '/');
+        $this->sleep = $sleep ?? static fn(float $seconds) => usleep((int) ($seconds * 1_000_000));
     }
 
     /**
@@ -120,6 +127,99 @@ final class Client
     public function undo(string $sessionId): void
     {
         $this->send('DELETE', $this->session($sessionId) . '/moves/last');
+    }
+
+    /** @return list<string> The names that go in the KataGo methods' $katago. */
+    public function listKataGos(): array
+    {
+        return array_map(static fn(array $item) => (string) $item['id'], $this->json('GET', '/katago')['items']);
+    }
+
+    /** @return array{version: string, git_hash: string} */
+    public function getKataGoVersion(string $katago): array
+    {
+        return $this->json('GET', $this->katago($katago) . '/version');
+    }
+
+    /** @return list<array<string, mixed>> The loaded models, as KataGo's query_models reports them. */
+    public function getKataGoModels(string $katago): array
+    {
+        return $this->json('GET', $this->katago($katago) . '/models')['models'];
+    }
+
+    /**
+     * Queue an analysis query. Read it with getQuery(), or use analyze() to wait for it.
+     *
+     * @param array<string, mixed> $query A query of KataGo's analysis engine, without "id",
+     *     for example ['rules' => 'japanese', 'boardXSize' => 19, 'boardYSize' => 19,
+     *     'moves' => [['B', 'Q16']]]. An object such as "rules" must not be an empty array,
+     *     which would be sent as [].
+     */
+    public function createQuery(string $katago, array $query): KataGoQuery
+    {
+        [$body, $response] = $this->send('POST', $this->katago($katago) . '/queries', $query);
+
+        return KataGoQuery::fromArray($body, self::retryAfter($response));
+    }
+
+    public function getQuery(string $katago, string $queryId): KataGoQuery
+    {
+        [$body, $response] = $this->send('GET', $this->query($katago, $queryId));
+
+        return KataGoQuery::fromArray($body, self::retryAfter($response));
+    }
+
+    /** Remove a query. KataGo stops it first if it has not finished. */
+    public function deleteQuery(string $katago, string $queryId): void
+    {
+        $this->send('DELETE', $this->query($katago, $queryId));
+    }
+
+    /**
+     * Send a query and wait until it has SUCCEEDED or FAILED.
+     *
+     * A query KataGo rejects comes back FAILED with KataGo's error, not as an
+     * exception. If it does not finish in time, it is deleted, which stops
+     * it, and a TimeoutException is thrown.
+     *
+     * @param array<string, mixed> $query See createQuery().
+     */
+    public function analyze(string $katago, array $query, float $timeoutSeconds = 600.0): KataGoQuery
+    {
+        $started = hrtime(true);
+        $slept = 0.0;
+        $current = $this->createQuery($katago, $query);
+        while (!$current->isFinished()) {
+            $wait = (float) ($current->retryAfter ?? 1);
+            // Sleeping counts as well as the clock, so a test's fake sleep ends the loop.
+            $elapsed = max((hrtime(true) - $started) / 1e9, $slept);
+            if ($elapsed + $wait > $timeoutSeconds) {
+                try {
+                    $this->deleteQuery($katago, $current->id);
+                } catch (ProblemException $e) {
+                    // It may have finished and been removed in the meantime.
+                    if (!$e->is('query-not-found')) {
+                        throw $e;
+                    }
+                }
+                throw new TimeoutException("KataGo query {$current->id} did not finish in {$timeoutSeconds} seconds.");
+            }
+            ($this->sleep)($wait);
+            $slept += $wait;
+            $current = $this->getQuery($katago, $current->id);
+        }
+
+        return $current;
+    }
+
+    private function katago(string $katago): string
+    {
+        return '/katago/' . self::segment($katago);
+    }
+
+    private function query(string $katago, string $queryId): string
+    {
+        return $this->katago($katago) . '/queries/' . self::segment($queryId);
     }
 
     private function session(string $sessionId): string
