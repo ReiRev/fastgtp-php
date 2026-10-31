@@ -71,7 +71,7 @@ jobs:
           command = ["$K/katago"]
           configs = ["$K/analysis_example.cfg"]
           model = "$K/model.bin.gz"
-          overrides = { numSearchThreads = 2, numAnalysisThreads = 1, logDir = "$RUNNER_TEMP/katago-logs" }
+          overrides = { numSearchThreadsPerAnalysisThread = 2, numAnalysisThreads = 1, logDir = "$RUNNER_TEMP/katago-logs" }
           TOML
           FASTGTP_ENGINE="/usr/games/gnugo --mode gtp" FASTGTP_KATAGO_CONFIG=katago.toml \
             nohup poetry run uvicorn fastgtp.server.main:app --port 8000 > ../fastgtp.log 2>&1 &
