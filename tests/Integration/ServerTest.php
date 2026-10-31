@@ -66,7 +66,10 @@ final class ServerTest extends TestCase
             }
             $this->assertSame(Color::White, $session->generateMove(Color::White)->color);
             $session->undo();
-            $this->assertStringContainsString('SZ[9]', $session->loadSgf('(;GM[1]SZ[9];B[ee];W[cc])', 1)->sgf);
+            // Only the first move is loaded.
+            $loaded = $session->loadSgf('(;GM[1]SZ[9];B[ee];W[cc])', 1)->sgf;
+            $this->assertStringContainsString('ee', $loaded);
+            $this->assertStringNotContainsString('cc', $loaded);
             $this->assertStringContainsString('SZ[9]', $session->board()->sgf);
         } finally {
             $session->delete();

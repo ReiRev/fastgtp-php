@@ -123,6 +123,41 @@ final class SessionsTest extends TestCase
         }
     }
 
+    public function testBodyUnlikeFastgtps(): void
+    {
+        // As from another service behind the same proxy: JSON objects, but not fastgtp's.
+        $engine = ['name' => 'x'];
+        $http = (new FakeHttp())
+            ->answer(200, ['size' => 9])
+            ->answer(201, ['vertex' => 'E5'])
+            ->answer(201, ['color' => 'black', 'vertex' => 'E5'])
+            ->answer(200, ['session_id' => 's', 'engine' => $engine])
+            ->answer(201, ['session_id' => '', 'engine' => self::ENGINE]);
+        $client = $http->client();
+        $session = $client->session('s');
+        $calls = [
+            fn() => $session->board(),
+            fn() => $session->play(Color::Black, 'E5'),
+            fn() => $session->play(Color::Black, 'E5'),
+            fn() => $session->info(),
+            fn() => $client->createSession(),
+        ];
+        foreach ($calls as $i => $call) {
+            try {
+                $call();
+                $this->fail("Response $i was accepted");
+            } catch (FastGtpException $e) {
+                $this->assertSame($i === 0 || $i === 3 ? 200 : 201, $e->status);
+            }
+        }
+    }
+
+    public function testKomiMayArriveAsAnInteger(): void
+    {
+        $http = (new FakeHttp())->answer(200, '{"size": 9, "komi": 7, "sgf": "(;SZ[9])"}');
+        $this->assertSame(7.0, $http->client()->session('s')->board()->komi);
+    }
+
     public function testIdsThatWouldChangeThePath(): void
     {
         $client = (new FakeHttp())->client();

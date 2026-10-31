@@ -15,6 +15,9 @@ final readonly class SessionInfo
     /** @param array<string, mixed> $data */
     public static function fromArray(array $data): self
     {
-        return new self((string) $data['session_id'], Engine::fromArray($data['engine']));
+        $fields = new Fields($data);
+        $fields->object('engine');
+
+        return new self($fields->string('session_id'), Engine::fromArray($data['engine']));
     }
 }

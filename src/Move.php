@@ -20,6 +20,9 @@ final readonly class Move
     /** @param array<string, mixed> $data */
     public static function fromArray(array $data): self
     {
-        return new self(Color::from($data['color']), (string) $data['vertex']);
+        $fields = new Fields($data);
+        $color = Color::tryFrom($fields->string('color')) ?? throw new \UnexpectedValueException('The response has no valid "color"');
+
+        return new self($color, $fields->string('vertex'));
     }
 }

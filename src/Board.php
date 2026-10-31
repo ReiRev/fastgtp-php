@@ -16,6 +16,8 @@ final readonly class Board
     /** @param array<string, mixed> $data */
     public static function fromArray(array $data): self
     {
-        return new self((int) $data['size'], (float) $data['komi'], (string) $data['sgf']);
+        $fields = new Fields($data);
+
+        return new self($fields->int('size'), $fields->float('komi'), $fields->string('sgf'));
     }
 }

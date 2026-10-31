@@ -9,12 +9,14 @@ use Http\Discovery\Psr18ClientDiscovery;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
+use UnexpectedValueException;
 
 /**
  * A client for a fastgtp server, and where Session handles come from.
  *
  * A failed request throws FastGtpException. An empty, "." or ".." id throws
- * InvalidArgumentException.
+ * InvalidArgumentException. Without a PSR-18 client, given or installed, the
+ * constructor throws php-http/discovery's NotFoundException.
  */
 final class Client
 {
@@ -47,9 +49,14 @@ final class Client
     /** Start an engine. */
     public function createSession(): Session
     {
-        $data = $this->transporter->json('POST', '/sessions');
+        return $this->transporter->read('POST', '/sessions', null, function (array $data): Session {
+            $id = (new Fields($data))->string('session_id');
+            if (in_array($id, ['', '.', '..'], true)) {
+                throw new UnexpectedValueException('The response has no valid "session_id"');
+            }
 
-        return new Session($this->transporter, (string) $data['session_id']);
+            return new Session($this->transporter, $id);
+        });
     }
 
     /** The session with this id, for example one kept from an earlier request. Sends nothing. */

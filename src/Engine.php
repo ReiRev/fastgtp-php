@@ -18,11 +18,13 @@ final readonly class Engine
     /** @param array<string, mixed> $data */
     public static function fromArray(array $data): self
     {
+        $fields = new Fields($data);
+
         return new self(
-            (string) $data['name'],
-            (string) $data['version'],
-            (string) $data['protocol_version'],
-            array_values(array_map('strval', $data['commands'])),
+            $fields->string('name'),
+            $fields->string('version'),
+            $fields->string('protocol_version'),
+            $fields->strings('commands'),
         );
     }
 }

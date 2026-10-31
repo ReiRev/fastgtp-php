@@ -23,12 +23,12 @@ final class Session
 
     public function info(): SessionInfo
     {
-        return SessionInfo::fromArray($this->transporter->json('GET', $this->path));
+        return $this->transporter->read('GET', $this->path, null, SessionInfo::fromArray(...));
     }
 
     public function board(): Board
     {
-        return Board::fromArray($this->transporter->json('GET', $this->path . '/board'));
+        return $this->transporter->read('GET', $this->path . '/board', null, Board::fromArray(...));
     }
 
     /** Replace the board with an empty one. */
@@ -36,7 +36,7 @@ final class Session
     {
         $body = ['size' => $size, 'komi' => $komi];
 
-        return Board::fromArray($this->transporter->json('PUT', $this->path . '/board', $body));
+        return $this->transporter->read('PUT', $this->path . '/board', $body, Board::fromArray(...));
     }
 
     /**
@@ -51,21 +51,21 @@ final class Session
             $body['move_count'] = $moveCount;
         }
 
-        return Board::fromArray($this->transporter->json('PUT', $this->path . '/board', $body));
+        return $this->transporter->read('PUT', $this->path . '/board', $body, Board::fromArray(...));
     }
 
-    /** Play a move. An illegal move throws a ProblemException of type "illegal-move". */
+    /** Play a move. An illegal move throws a FastGtpException whose is('illegal-move') is true. */
     public function play(Color $color, string $vertex): Move
     {
         $body = ['color' => $color->value, 'vertex' => $vertex];
 
-        return Move::fromArray($this->transporter->json('POST', $this->path . '/moves', $body));
+        return $this->transporter->read('POST', $this->path . '/moves', $body, Move::fromArray(...));
     }
 
     /** Let the engine choose and play a move. It may resign. */
     public function generateMove(Color $color): Move
     {
-        return Move::fromArray($this->transporter->json('POST', $this->path . '/moves', ['color' => $color->value]));
+        return $this->transporter->read('POST', $this->path . '/moves', ['color' => $color->value], Move::fromArray(...));
     }
 
     /** Take back the last move. */
