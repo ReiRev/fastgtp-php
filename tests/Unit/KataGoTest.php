@@ -16,7 +16,15 @@ final class KataGoTest extends TestCase
         $http = (new FakeHttp())
             ->answer(200, ['items' => [['id' => 'default'], ['id' => 'human']]])
             ->answer(200, ['version' => '1.18.0', 'git_hash' => 'abc'])
-            ->answer(200, ['models' => [['name' => 'm.bin.gz', 'futureField' => 1]]]);
+            ->answer(200, ['models' => [[
+                'name' => 'm.bin.gz',
+                'internalName' => 'm',
+                'maxBatchSize' => 8,
+                'usesHumanSLProfile' => false,
+                'version' => 15,
+                'usingFP16' => 'false',
+                'futureField' => 1,
+            ]]]);
         $client = $http->client();
 
         $katagos = $client->katagos();
@@ -64,10 +72,12 @@ final class KataGoTest extends TestCase
     {
         $http = (new FakeHttp())
             ->answer(200, ['items' => [['name' => 'default']]])
+            ->answer(200, ['items' => [['id' => '..']]])
             ->answer(200, ['version' => '1.18.0'])
             ->answer(200, ['models' => 'm.bin.gz']);
         $client = $http->client();
         $calls = [
+            fn() => $client->katagos(),
             fn() => $client->katagos(),
             fn() => $client->katago('default')->version(),
             fn() => $client->katago('default')->models(),

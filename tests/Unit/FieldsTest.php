@@ -25,6 +25,7 @@ final class FieldsTest extends TestCase
         ]);
 
         $this->assertSame('x', $fields->string('s'));
+        $this->assertSame('x', $fields->id('s'));
         $this->assertSame(9, $fields->int('i'));
         $this->assertSame(6.5, $fields->float('f'));
         // JSON has one number type, so a komi of 7 arrives as an int.
@@ -48,6 +49,7 @@ final class FieldsTest extends TestCase
             fn() => $fields->object('o'),
             fn() => $fields->objects('os'),
             fn() => $fields->objects('m'),
+            fn() => (new Fields(['id' => '..']))->id('id'),
         ];
         foreach ($reads as $i => $read) {
             try {

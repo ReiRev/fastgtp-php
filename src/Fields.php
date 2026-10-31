@@ -27,6 +27,14 @@ final class Fields
         return is_string($this->data[$key] ?? null) ? $this->data[$key] : throw self::bad($key);
     }
 
+    /** A string that can be one segment of a path, as an id from the server must be. */
+    public function id(string $key): string
+    {
+        $value = $this->string($key);
+
+        return in_array($value, ['', '.', '..'], true) ? throw self::bad($key) : $value;
+    }
+
     public function int(string $key): int
     {
         return is_int($this->data[$key] ?? null) ? $this->data[$key] : throw self::bad($key);
