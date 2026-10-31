@@ -27,6 +27,14 @@ final class Fields
         return is_string($this->data[$key] ?? null) ? $this->data[$key] : throw self::bad($key);
     }
 
+    /** A string that can be one segment of a path, as an id from the server must be. */
+    public function id(string $key): string
+    {
+        $value = $this->string($key);
+
+        return in_array($value, ['', '.', '..'], true) ? throw self::bad($key) : $value;
+    }
+
     public function int(string $key): int
     {
         return is_int($this->data[$key] ?? null) ? $this->data[$key] : throw self::bad($key);
@@ -46,6 +54,22 @@ final class Fields
         $value = $this->data[$key] ?? null;
         if (!is_array($value) || !array_is_list($value) || array_filter($value, 'is_string') !== $value) {
             throw self::bad($key);
+        }
+
+        return $value;
+    }
+
+    /** @return list<array<string, mixed>> A list of objects, kept as arrays. */
+    public function objects(string $key): array
+    {
+        $value = $this->data[$key] ?? null;
+        if (!is_array($value) || !array_is_list($value)) {
+            throw self::bad($key);
+        }
+        foreach ($value as $item) {
+            if (!is_array($item) || ($item !== [] && array_is_list($item))) {
+                throw self::bad($key);
+            }
         }
 
         return $value;

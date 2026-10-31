@@ -21,9 +21,11 @@ final class FieldsTest extends TestCase
             'l' => ['a', 'b'],
             'o' => ['k' => 'v'],
             'e' => [],
+            'os' => [['a' => 1], []],
         ]);
 
         $this->assertSame('x', $fields->string('s'));
+        $this->assertSame('x', $fields->id('s'));
         $this->assertSame(9, $fields->int('i'));
         $this->assertSame(6.5, $fields->float('f'));
         // JSON has one number type, so a komi of 7 arrives as an int.
@@ -31,11 +33,12 @@ final class FieldsTest extends TestCase
         $this->assertSame(['a', 'b'], $fields->strings('l'));
         $this->assertSame('v', $fields->object('o')->string('k'));
         $this->assertInstanceOf(Fields::class, $fields->object('e'));
+        $this->assertSame([['a' => 1], []], $fields->objects('os'));
     }
 
     public function testMissingOrMistypedFields(): void
     {
-        $fields = new Fields(['s' => 1, 'i' => '9', 'f' => '6.5', 'l' => ['a', 1], 'm' => ['k' => 'a'], 'o' => ['a']]);
+        $fields = new Fields(['s' => 1, 'i' => '9', 'f' => '6.5', 'l' => ['a', 1], 'm' => ['k' => 'a'], 'o' => ['a'], 'os' => [['a' => 1], 'b']]);
         $reads = [
             fn() => $fields->string('s'),
             fn() => $fields->string('missing'),
@@ -44,6 +47,9 @@ final class FieldsTest extends TestCase
             fn() => $fields->strings('l'),
             fn() => $fields->strings('m'),
             fn() => $fields->object('o'),
+            fn() => $fields->objects('os'),
+            fn() => $fields->objects('m'),
+            fn() => (new Fields(['id' => '..']))->id('id'),
         ];
         foreach ($reads as $i => $read) {
             try {
