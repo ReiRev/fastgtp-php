@@ -3,7 +3,7 @@
 FROM python:3.12-slim
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl git gnugo unzip \
+    && apt-get install -y --no-install-recommends ca-certificates curl gnugo unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # The Eigen (CPU) build, so no GPU is needed, and a small net from KataGo's
@@ -24,10 +24,10 @@ RUN curl -sfL -o /tmp/katago.zip "$KATAGO_URL" \
     && cd /opt/katago && ./katago --appimage-extract > /dev/null && rm katago \
     && /opt/katago/squashfs-root/AppRun version
 
-# A fixed fastgtp commit, so a change in fastgtp cannot change the results
-# here. Raise it in a pull request to test against a newer fastgtp.
-ARG FASTGTP_REF=93b80b31714ca40d29ef49a3f8264f68115d8d25
-RUN pip install --no-cache-dir "fastgtp @ git+https://github.com/ReiRev/fastgtp@${FASTGTP_REF}"
+# A fixed fastgtp release from PyPI, the package users install, so a new
+# release cannot change the results here. Raise it in a pull request.
+ARG FASTGTP_VERSION=0.1.0
+RUN pip install --no-cache-dir "fastgtp==${FASTGTP_VERSION}"
 
 COPY katago.toml /etc/fastgtp/katago.toml
 ENV FASTGTP_ENGINE="gnugo --mode gtp" \
