@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FastGtp\Tests\Unit;
 
+use FastGtp\FastGtpClient;
 use FastGtp\HttpTransporter;
 use GuzzleHttp\Psr7\HttpFactory;
 use GuzzleHttp\Psr7\Response;
@@ -52,6 +53,12 @@ final class FakeHttp implements ClientInterface
         }
 
         return $next;
+    }
+
+    /** @param array<string, string> $headers */
+    public function client(array $headers = []): FastGtpClient
+    {
+        return new FastGtpClient('http://fastgtp.test/', $this, $headers);
     }
 
     /** @param array<string, string> $headers */

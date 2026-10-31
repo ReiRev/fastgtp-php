@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace FastGtp\Tests\Integration;
 
+use FastGtp\FastGtpClient;
+use FastGtp\Color;
 use FastGtp\FastGtpException;
 use FastGtp\HttpTransporter;
 use GuzzleHttp\Client as GuzzleClient;
@@ -17,14 +19,16 @@ use PHPUnit\Framework\TestCase;
  *
  * SpecCheckingHttp throws on any response that does not match the spec.
  *
- * Until the client's public classes exist, these tests send requests through
- * HttpTransporter, which every public class will use.
+ * The KataGo tests send requests through HttpTransporter until the client
+ * has KataGo classes.
  */
 final class ServerTest extends TestCase
 {
     private const GAME = ['rules' => 'japanese', 'komi' => 6.5, 'boardXSize' => 9, 'boardYSize' => 9];
 
     private static SpecCheckingHttp $http;
+
+    private static FastGtpClient $client;
 
     private static HttpTransporter $transporter;
 
@@ -40,29 +44,38 @@ final class ServerTest extends TestCase
         $spec = json_decode((string) $guzzle->get(rtrim($url, '/') . '/openapi.json')->getBody(), true);
         self::$http = new SpecCheckingHttp($guzzle, $spec);
         $factory = new HttpFactory();
+        self::$client = new FastGtpClient($url, self::$http);
         self::$transporter = new HttpTransporter($url, self::$http, $factory, $factory);
         self::$katago = getenv('FASTGTP_KATAGO') ?: 'default';
     }
 
     public function testGame(): void
     {
-        $t = self::$transporter;
-        $path = '/sessions/' . $t->json('POST', '/sessions')['session_id'];
+        $session = self::$client->createSession();
         try {
-            $t->json('PUT', "$path/board", ['size' => 9, 'komi' => 6.5]);
-            $this->assertSame('E5', $t->json('POST', "$path/moves", ['color' => 'BLACK', 'vertex' => 'E5'])['vertex']);
+            // A handle made from the id reaches the same session.
+            $again = self::$client->session($session->id);
+            $this->assertSame('GNU Go', $again->engine()->name);
+            $this->assertSame(9, $session->setBoard(9, 6.5)->size);
+            $this->assertSame('E5', $session->play(Color::Black, 'E5')->vertex);
             try {
-                $t->json('POST', "$path/moves", ['color' => 'WHITE', 'vertex' => 'E5']);
+                $again->play(Color::White, 'E5');
                 $this->fail('An occupied point was accepted');
             } catch (FastGtpException $e) {
                 $this->assertTrue($e->is('illegal-move'));
             }
-            $this->assertSame('WHITE', $t->json('POST', "$path/moves", ['color' => 'WHITE'])['color']);
+            $this->assertSame(Color::White, $session->generateMove(Color::White)->color);
+            $session->undo();
+            // Only the first move is loaded.
+            $loaded = $session->loadSgf('(;GM[1]SZ[9];B[ee];W[cc])', 1)->sgf;
+            $this->assertStringContainsString('ee', $loaded);
+            $this->assertStringNotContainsString('cc', $loaded);
+            $this->assertStringContainsString('SZ[9]', $session->board()->sgf);
         } finally {
-            $t->send('DELETE', $path);
+            $session->delete();
         }
         try {
-            $t->json('GET', $path);
+            $session->engine();
             $this->fail('The session was not deleted');
         } catch (FastGtpException $e) {
             $this->assertTrue($e->is('session-not-found'));

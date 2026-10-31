@@ -8,6 +8,7 @@
     "require": {
         "php": ">=8.2",
         "ext-json": "*",
+        "php-http/discovery": "^1.19",
         "psr/http-client": "^1.0",
         "psr/http-factory": "^1.0",
         "psr/http-message": "^1.1 || ^2.0"
@@ -17,9 +18,6 @@
         "laravel/pint": "^1.18",
         "opis/json-schema": "^2.4",
         "phpunit/phpunit": "^11.5 || ^12.0"
-    },
-    "suggest": {
-        "guzzlehttp/guzzle": "Lets Client::create() build the HTTP client for you."
     },
     "autoload": {
         "psr-4": {
@@ -38,6 +36,9 @@
         "format-check": "pint --test"
     },
     "config": {
-        "sort-packages": true
+        "sort-packages": true,
+        "allow-plugins": {
+            "php-http/discovery": false
+        }
     }
 }
