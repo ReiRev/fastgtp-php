@@ -44,7 +44,7 @@ final class ServerTest extends TestCase
         $spec = json_decode((string) $guzzle->get(rtrim($url, '/') . '/openapi.json')->getBody(), true);
         self::$http = new SpecCheckingHttp($guzzle, $spec);
         $factory = new HttpFactory();
-        self::$client = new Client($url, self::$http, [], $factory, $factory);
+        self::$client = new Client($url, self::$http);
         self::$transporter = new HttpTransporter($url, self::$http, $factory, $factory);
         self::$katago = getenv('FASTGTP_KATAGO') ?: 'default';
     }

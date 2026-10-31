@@ -7,8 +7,6 @@ namespace FastGtp;
 use Http\Discovery\Psr17FactoryDiscovery;
 use Http\Discovery\Psr18ClientDiscovery;
 use Psr\Http\Client\ClientInterface;
-use Psr\Http\Message\RequestFactoryInterface;
-use Psr\Http\Message\StreamFactoryInterface;
 use UnexpectedValueException;
 
 /**
@@ -27,21 +25,15 @@ final class Client
      *     Without one, an installed client is found.
      * @param array<string, string> $headers Sent with every request, for example
      *     the credentials of a proxy in front of the server.
-     * @param RequestFactoryInterface|null $requests Found when not given, like $http.
-     * @param StreamFactoryInterface|null $streams Found when not given, like $http.
      */
-    public function __construct(
-        string $baseUri,
-        ?ClientInterface $http = null,
-        array $headers = [],
-        ?RequestFactoryInterface $requests = null,
-        ?StreamFactoryInterface $streams = null,
-    ) {
+    public function __construct(string $baseUri, ?ClientInterface $http = null, array $headers = [])
+    {
+        // The PSR-17 factories only build requests, so they are always found.
         $this->transporter = new HttpTransporter(
             $baseUri,
             $http ?? Psr18ClientDiscovery::find(),
-            $requests ?? Psr17FactoryDiscovery::findRequestFactory(),
-            $streams ?? Psr17FactoryDiscovery::findStreamFactory(),
+            Psr17FactoryDiscovery::findRequestFactory(),
+            Psr17FactoryDiscovery::findStreamFactory(),
             $headers,
         );
     }

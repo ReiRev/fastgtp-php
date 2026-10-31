@@ -58,9 +58,7 @@ final class FakeHttp implements ClientInterface
     /** @param array<string, string> $headers */
     public function client(array $headers = []): Client
     {
-        $factory = new HttpFactory();
-
-        return new Client('http://fastgtp.test/', $this, $headers, $factory, $factory);
+        return new Client('http://fastgtp.test/', $this, $headers);
     }
 
     /** @param array<string, string> $headers */
