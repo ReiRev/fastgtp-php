@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FastGtp\Tests\Unit;
 
+use FastGtp\Client;
 use FastGtp\Http;
 use GuzzleHttp\Psr7\HttpFactory;
 use GuzzleHttp\Psr7\Response;
@@ -41,6 +42,16 @@ final class FakeHttp implements ClientInterface
         $this->requests[] = $request;
 
         return array_shift($this->responses) ?? throw new \LogicException('No response queued');
+    }
+
+    /** @param array<string, string> $headers */
+    public function client(array $headers = []): Client
+    {
+        $factory = new HttpFactory();
+
+        return new Client('http://fastgtp.test/', $this, $factory, $factory, $headers, function (float $s): void {
+            $this->sleeps[] = $s;
+        });
     }
 
     /** @param array<string, string> $headers */
