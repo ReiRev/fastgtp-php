@@ -22,9 +22,6 @@ final class SpecCheckingHttp implements ClientInterface
 
     private readonly Validator $validator;
 
-    /** @var list<string> */
-    public array $checked = [];
-
     /** @param array<string, mixed> $spec The decoded /openapi.json. */
     public function __construct(private readonly ClientInterface $inner, private readonly array $spec)
     {
@@ -54,7 +51,6 @@ final class SpecCheckingHttp implements ClientInterface
                 throw new RuntimeException("$method $path $status does not match $schema: $errors");
             }
         }
-        $this->checked[] = "$method $path $status";
 
         return $response;
     }
