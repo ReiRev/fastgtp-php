@@ -99,6 +99,16 @@ final class KataGoTest extends TestCase
         $this->assertSame('/katago/default/queries/q1', $http->requests[2]->getUri()->getPath());
     }
 
+    public function testTimeoutIgnoresAQueryAlreadyRemoved(): void
+    {
+        $http = (new FakeHttp())
+            ->answer(201, self::query('RUNNING'), ['Retry-After' => '5'])
+            ->answer(404, ['type' => self::PROBLEMS . 'query-not-found', 'title' => 'Query not found', 'status' => 404]);
+
+        $this->expectException(TimeoutException::class);
+        $http->client()->analyze('default', self::QUERY, 1.0);
+    }
+
     public function testQueueFull(): void
     {
         $http = (new FakeHttp())->answer(503, [

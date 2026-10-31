@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FastGtp\Tests\Integration;
 
+use Opis\JsonSchema\Errors\ErrorFormatter;
 use Opis\JsonSchema\Validator;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
@@ -48,8 +49,9 @@ final class SpecCheckingHttp implements ClientInterface
         } else {
             $result = $this->validator->validate(json_decode($body), (object) ['$ref' => self::SPEC_URI . $schema]);
             if (!$result->isValid()) {
-                $error = $result->error();
-                throw new RuntimeException("$method $path $status does not match $schema: {$error->message()} at " . implode('/', $error->data()->fullPath()));
+                // The formatter names the fields that failed; the top error only names the $ref.
+                $errors = json_encode((new ErrorFormatter())->format($result->error(), false), JSON_UNESCAPED_SLASHES);
+                throw new RuntimeException("$method $path $status does not match $schema: $errors");
             }
         }
         $this->checked[] = "$method $path $status";
