@@ -6,6 +6,9 @@ namespace FastGtp;
 
 use InvalidArgumentException;
 use JsonException;
+use TypeError;
+use UnexpectedValueException;
+use ValueError;
 use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestFactoryInterface;
@@ -51,6 +54,25 @@ final class HttpTransporter
     public function json(string $method, string $path, ?array $body = null): array
     {
         return $this->jsonAndResponse($method, $path, $body)[0];
+    }
+
+    /**
+     * Send a request and make a value from its JSON object.
+     *
+     * @template T
+     * @param array<string, mixed>|null $body
+     * @param callable(array<string, mixed>): T $make Throws UnexpectedValueException on a bad field,
+     *     usually from Fields. A TypeError or ValueError from a value it did not check counts as one too.
+     * @return T
+     */
+    public function read(string $method, string $path, ?array $body, callable $make): mixed
+    {
+        [$data, $response] = $this->jsonAndResponse($method, $path, $body);
+        try {
+            return $make($data);
+        } catch (UnexpectedValueException|TypeError|ValueError $e) {
+            throw new FastGtpException($e->getMessage(), $response->getStatusCode(), previous: $e);
+        }
     }
 
     /**
