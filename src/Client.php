@@ -13,13 +13,13 @@ use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 
 /**
- * A client for a fastgtp server, and where Session handles come from.
+ * A client for a fastgtp server, and where Session and KataGo handles come from.
  *
  * Error responses, any status outside 2xx, and a 2xx body that is not the
  * JSON expected are thrown as ProblemException. Such a body keeps its status,
  * so a ProblemException can carry a 2xx status. Errors from the HTTP client
  * itself, such as a refused connection, are thrown as they are. An empty,
- * "." or ".." id throws InvalidArgumentException.
+ * "." or ".." id or name throws InvalidArgumentException.
  */
 final class Client
 {
@@ -68,5 +68,20 @@ final class Client
     public function session(string $id): Session
     {
         return new Session($this->http, $id);
+    }
+
+    /** @return list<KataGo> The KataGos the server runs. */
+    public function katagos(): array
+    {
+        return array_map(
+            fn(array $item) => new KataGo($this->http, (string) $item['id']),
+            $this->http->json('GET', '/katago')['items'],
+        );
+    }
+
+    /** The KataGo with this name, such as "default". Sends nothing. */
+    public function katago(string $name): KataGo
+    {
+        return new KataGo($this->http, $name);
     }
 }
