@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FastGtp;
 
+use FastGtp\KataGo\KataGo;
 use Http\Discovery\Psr17FactoryDiscovery;
 use Http\Discovery\Psr18ClientDiscovery;
 use Psr\Http\Client\ClientInterface;

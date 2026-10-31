@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FastGtp\Tests\Unit;
+namespace FastGtp\Tests\Unit\KataGo;
 
 use FastGtp\FastGtpException;
+use FastGtp\Tests\Unit\FakeHttp;
 use PHPUnit\Framework\TestCase;
 
 final class KataGoTest extends TestCase

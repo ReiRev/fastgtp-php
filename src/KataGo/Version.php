@@ -2,9 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FastGtp;
+namespace FastGtp\KataGo;
 
-final readonly class KataGoVersion
+use FastGtp\Fields;
+
+/** What KataGo reports for its query_version action. */
+final readonly class Version
 {
     public function __construct(
         public string $version,

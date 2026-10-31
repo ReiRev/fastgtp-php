@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FastGtp;
+namespace FastGtp\KataGo;
+
+use FastGtp\Fields;
+use FastGtp\HttpTransporter;
 
 /**
  * One KataGo analysis engine on the server. Each method sends one request.
@@ -22,9 +25,9 @@ final class KataGo
         $this->path = '/katago/' . HttpTransporter::segment($name);
     }
 
-    public function version(): KataGoVersion
+    public function version(): Version
     {
-        return $this->transporter->read('GET', $this->path . '/version', null, KataGoVersion::fromArray(...));
+        return $this->transporter->read('GET', $this->path . '/version', null, Version::fromArray(...));
     }
 
     /**
