@@ -1,0 +1,7 @@
+[katago.default]
+command = ["/opt/katago/squashfs-root/AppRun"]
+configs = ["/opt/katago/analysis_example.cfg"]
+model = "/opt/katago/model.bin.gz"
+# analysis_example.cfg sets numSearchThreadsPerAnalysisThread, and KataGo
+# refuses numSearchThreads next to it.
+overrides = { numSearchThreadsPerAnalysisThread = 2, numAnalysisThreads = 1, logDir = "/tmp/katago-logs" }

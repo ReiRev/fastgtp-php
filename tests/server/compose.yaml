@@ -1,0 +1,12 @@
+# The fastgtp server the integration tests run against:
+#
+#     docker compose -f tests/server/compose.yaml up -d --build --wait
+#     FASTGTP_URL=http://127.0.0.1:8000 composer test-integration
+#     docker compose -f tests/server/compose.yaml down
+#
+# Set FASTGTP_PORT to use another port on the host.
+services:
+  fastgtp:
+    build: .
+    ports:
+      - "127.0.0.1:${FASTGTP_PORT:-8000}:8000"

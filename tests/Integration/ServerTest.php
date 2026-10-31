@@ -12,8 +12,8 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * Runs against a fastgtp server named by FASTGTP_URL, with a GTP engine and
- * a KataGo named by FASTGTP_KATAGO (default "default"). CI starts one with
- * GNU Go and KataGo's CPU build.
+ * a KataGo named by FASTGTP_KATAGO (default "default"). tests/server/compose.yaml
+ * starts one with GNU Go and KataGo's CPU build.
  *
  * SpecCheckingHttp throws on any response that does not match the spec.
  *

@@ -23,64 +23,19 @@ jobs:
 
   integration:
     runs-on: ubuntu-24.04
-    env:
-      KATAGO_URL: https://github.com/lightvector/KataGo/releases/download/v1.18.0/katago-v1.18.0-eigen-linux-x64.zip
-      KATAGO_SHA256: 3e062b4ba90d5a2d986bc0312a61e6b7abdf92235e59db13f1febb30f643297d
-      # A small net from KataGo's own tests, fast enough on a CPU.
-      MODEL_URL: https://github.com/lightvector/KataGo/raw/v1.18.0/cpp/tests/models/g170-b6c96-s175395328-d26788732.bin.gz
-      MODEL_SHA256: f5d32604e3675c480c7c8f6aa579a1ea857135628a0afccc8fa56330fbacd38d
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/checkout@v5
-        with:
-          repository: ReiRev/fastgtp
-          path: fastgtp-server
       - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.3"
           coverage: none
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-      - uses: actions/cache@v4
-        with:
-          path: katago
-          key: katago-v1.18.0-eigen-g170-b6c96
-      # The CPU (Eigen) build, so CI needs no GPU.
-      - name: Download KataGo
-        run: |
-          if [ ! -x katago/katago ]; then
-            mkdir -p katago
-            curl -sfL -o katago.zip "$KATAGO_URL"
-            curl -sfL -o katago/model.bin.gz "$MODEL_URL"
-            echo "$KATAGO_SHA256  katago.zip" | sha256sum -c
-            echo "$MODEL_SHA256  katago/model.bin.gz" | sha256sum -c
-            unzip -q katago.zip -d katago
-          fi
-      - name: Install GNU Go and fastgtp
-        run: |
-          sudo apt-get update && sudo apt-get install -y --no-install-recommends gnugo
-          pipx install poetry
-          cd fastgtp-server && poetry install --no-interaction
+      # The same server as on a developer's machine: tests/server/compose.yaml.
       - name: Start fastgtp with GNU Go and KataGo
-        working-directory: fastgtp-server
-        run: |
-          K="$GITHUB_WORKSPACE/katago"
-          cat > katago.toml <<TOML
-          [katago.default]
-          command = ["$K/katago"]
-          configs = ["$K/analysis_example.cfg"]
-          model = "$K/model.bin.gz"
-          overrides = { numSearchThreadsPerAnalysisThread = 2, numAnalysisThreads = 1, logDir = "$RUNNER_TEMP/katago-logs" }
-          TOML
-          FASTGTP_ENGINE="/usr/games/gnugo --mode gtp" FASTGTP_KATAGO_CONFIG=katago.toml \
-            nohup poetry run uvicorn fastgtp.server.main:app --port 8000 > ../fastgtp.log 2>&1 &
-          for i in $(seq 120); do curl -sf localhost:8000/katago > /dev/null && exit 0; sleep 1; done
-          cat ../fastgtp.log; exit 1
+        run: docker compose -f tests/server/compose.yaml up -d --build --wait
       - run: composer update --no-interaction --no-progress
       - run: composer test-integration
         env:
           FASTGTP_URL: http://127.0.0.1:8000
       - name: Show the fastgtp log
         if: failure()
-        run: cat fastgtp.log
+        run: docker compose -f tests/server/compose.yaml logs
