@@ -103,16 +103,18 @@ To avoid holding a request open while KataGo works, queue the query, keep its id
 ```php
 $id = $katago->createQuery($query)->id;
 // ... a later request:
-$result = $client->katago('default')->query($id)->get();
-if (!$result->isFinished()) {
+$query = $client->katago('default')->query($id);
+$result = $query->get();
+if ($result->isFinished()) {
+    $query->delete();                       // once the result is kept; deleting earlier stops it
+} else {
     // ask again in $result->retryAfter seconds
 }
-$client->katago('default')->query($id)->delete();
 ```
 
 ## Errors
 
-Every failed request throws `FastGtp\FastGtpException`. For an error response, its fields come from the server's problem details, and `is()` tells the [problem types](https://github.com/ReiRev/fastgtp/blob/main/docs/problems.md) apart:
+Every error response and every failed request throws `FastGtp\FastGtpException`. For an error response, its fields come from the server's problem details, and `is()` tells the [problem types](https://github.com/ReiRev/fastgtp/blob/main/docs/problems.md) apart:
 
 ```php
 use FastGtp\FastGtpException;
@@ -120,17 +122,23 @@ use FastGtp\FastGtpException;
 try {
     $session->play(Color::White, 'E5');
 } catch (FastGtpException $e) {
-    if ($e->is('illegal-move')) {
-        // the point is taken, or the move is not allowed
-    } elseif ($e->is('too-many-sessions') || $e->is('queue-full')) {
-        // try again in $e->retryAfter seconds
-    } else {
+    if (!$e->is('illegal-move')) {
         throw $e;
     }
+    // the point is taken, or the move is not allowed
+}
+
+try {
+    $session = $client->createSession();
+} catch (FastGtpException $e) {
+    if (!$e->is('too-many-sessions')) {     // queue-full is the same for createQuery()
+        throw $e;
+    }
+    // try again in $e->retryAfter seconds
 }
 ```
 
-`$e->status` is the HTTP status, or null when no response arrived (then `getPrevious()` holds the HTTP client's exception) and for `TimeoutException`. A response that is not what fastgtp sends also throws `FastGtpException`.
+`$e->status` is the HTTP status, or null when no response arrived (then `getPrevious()` holds the HTTP client's exception) and for `TimeoutException`. A response that is not what fastgtp sends also throws `FastGtpException`. Mistakes in the call itself throw PHP's own exceptions: `InvalidArgumentException` for an empty, `.` or `..` id, and `JsonException` for a query that cannot be written as JSON, such as one with `NAN`.
 
 ## Development
 
