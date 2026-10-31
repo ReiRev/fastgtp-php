@@ -6,16 +6,10 @@ It needs PHP 8.2 or later and any [PSR-18](https://www.php-fig.org/psr/psr-18/) 
 
 ## Install
 
-The package is not on Packagist yet. Add the repository to your `composer.json`, then require it with an HTTP client:
-
-```json
-{
-    "repositories": [{ "type": "vcs", "url": "https://github.com/ReiRev/fastgtp-php" }]
-}
-```
+Install it from [Packagist](https://packagist.org/packages/reirev/fastgtp) with an HTTP client:
 
 ```bash
-composer require reirev/fastgtp:dev-main guzzlehttp/guzzle
+composer require reirev/fastgtp guzzlehttp/guzzle
 ```
 
 ## Connect
