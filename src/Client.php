@@ -13,8 +13,9 @@ use UnexpectedValueException;
  * A client for a fastgtp server, and where Session handles come from.
  *
  * A failed request throws FastGtpException. An empty, "." or ".." id throws
- * InvalidArgumentException. Without a PSR-18 client, given or installed, the
- * constructor throws php-http/discovery's NotFoundException.
+ * InvalidArgumentException. The constructor throws php-http/discovery's
+ * NotFoundException when no PSR-18 client is given or installed, or when no
+ * PSR-17 factory is installed. Guzzle provides both.
  */
 final class Client
 {
@@ -28,7 +29,8 @@ final class Client
      */
     public function __construct(string $baseUri, ?ClientInterface $http = null, array $headers = [])
     {
-        // The PSR-17 factories only build requests, so they are always found.
+        // The PSR-17 factories only build requests, and every HTTP client
+        // package ships them, so they are always found rather than passed.
         $this->transporter = new HttpTransporter(
             $baseUri,
             $http ?? Psr18ClientDiscovery::find(),
