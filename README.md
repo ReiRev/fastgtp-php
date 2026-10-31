@@ -21,12 +21,11 @@ use FastGtp\Client;
 $client = Client::create('http://localhost:8000');
 ```
 
-Headers passed to `create()` go with every request. Use them for the credentials of a proxy in front of the server, for example a Cloudflare Access service token:
+Headers passed to `create()` go with every request. Use them for the credentials of a proxy in front of the server:
 
 ```php
 $client = Client::create('https://fastgtp.example.com', [
-    'CF-Access-Client-Id' => $clientId,
-    'CF-Access-Client-Secret' => $clientSecret,
+    'Authorization' => 'Bearer ' . $token,
 ]);
 ```
 
@@ -123,7 +122,7 @@ try {
 }
 ```
 
-A response with a status outside 2xx, such as a proxy's redirect to its login page, is a `ProblemException` too, and so is a body that is not JSON, which keeps its 2xx status. Errors from the HTTP client itself, such as a refused connection, are thrown as they are. An empty, `.` or `..` id or name throws `InvalidArgumentException`.
+A response with a status outside 2xx, such as a proxy's redirect to its login page, is a `ProblemException` too, and so is a 2xx body that is not the JSON expected, which keeps its 2xx status. Errors from the HTTP client itself, such as a refused connection, are thrown as they are. An empty, `.` or `..` id or name throws `InvalidArgumentException`.
 
 ## Development
 

@@ -96,6 +96,7 @@ final class KataGoTest extends TestCase
         $http = (new FakeHttp())
             ->answer(200, self::query('QUEUED'), ['Retry-After' => '1'])
             ->answer(200, self::query('RUNNING'), ['Retry-After' => '1'])
+            ->answer(200, self::query('RUNNING'), ['Retry-After' => '1'])
             ->answer(204);
 
         try {
@@ -103,14 +104,28 @@ final class KataGoTest extends TestCase
             $this->fail('No exception');
         } catch (TimeoutException) {
         }
-        $this->assertSame([1.0], $http->sleeps);
-        $this->assertSame('DELETE', $http->requests[2]->getMethod());
-        $this->assertSame('/katago/default/queries/q1', $http->requests[2]->getUri()->getPath());
+        // It sleeps only the half second left, and reads once more before deleting.
+        $this->assertEqualsWithDelta([1.0, 0.5], $http->sleeps, 0.01);
+        $this->assertSame('GET', $http->requests[2]->getMethod());
+        $this->assertSame('DELETE', $http->requests[3]->getMethod());
+        $this->assertSame('/katago/default/queries/q1', $http->requests[3]->getUri()->getPath());
+    }
+
+    public function testWaitReturnsAQueryThatFinishesAtTheDeadline(): void
+    {
+        $http = (new FakeHttp())
+            ->answer(200, self::query('RUNNING'), ['Retry-After' => '5'])
+            ->answer(200, self::query('SUCCEEDED'));
+
+        $result = $http->client()->katago('default')->query('q1')->wait(1.0);
+        $this->assertSame(QueryStatus::Succeeded, $result->status);
+        $this->assertEqualsWithDelta([1.0], $http->sleeps, 0.01);
     }
 
     public function testTimeoutIgnoresAQueryAlreadyRemoved(): void
     {
         $http = (new FakeHttp())
+            ->answer(200, self::query('RUNNING'), ['Retry-After' => '5'])
             ->answer(200, self::query('RUNNING'), ['Retry-After' => '5'])
             ->answer(404, ['type' => self::PROBLEMS . 'query-not-found', 'title' => 'Query not found', 'status' => 404]);
 

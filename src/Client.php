@@ -15,9 +15,9 @@ use Psr\Http\Message\StreamFactoryInterface;
 /**
  * A client for a fastgtp server, and where Session and KataGo handles come from.
  *
- * Error responses, any status outside 2xx, and a body that is not JSON are
- * thrown as ProblemException. A body that is not JSON keeps its status, so a
- * ProblemException can carry a 2xx status. Errors from the HTTP client
+ * Error responses, any status outside 2xx, and a 2xx body that is not the
+ * JSON expected are thrown as ProblemException. Such a body keeps its status,
+ * so a ProblemException can carry a 2xx status. Errors from the HTTP client
  * itself, such as a refused connection, are thrown as they are. An empty,
  * "." or ".." id or name throws InvalidArgumentException.
  */

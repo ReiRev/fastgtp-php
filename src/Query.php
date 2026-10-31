@@ -21,7 +21,7 @@ final class Query
     /** The query as it is now. */
     public function get(): QueryResult
     {
-        [$body, $response] = $this->http->send('GET', $this->path);
+        [$body, $response] = $this->http->jsonAndResponse('GET', $this->path);
 
         return QueryResult::fromArray($body, Http::retryAfter($response));
     }
@@ -36,13 +36,12 @@ final class Query
     public function wait(float $timeoutSeconds = 600.0): QueryResult
     {
         $started = hrtime(true);
-        $slept = 0.0;
+        // Sleep the clock did not see, so a test's fake sleep still uses up the time.
+        $unseen = 0.0;
         $current = $this->get();
         while (!$current->isFinished()) {
-            $wait = (float) ($current->retryAfter ?? 1);
-            // Sleeping counts as well as the clock, so a test's fake sleep ends the loop.
-            $elapsed = max((hrtime(true) - $started) / 1e9, $slept);
-            if ($elapsed + $wait > $timeoutSeconds) {
+            $remaining = $timeoutSeconds - (hrtime(true) - $started) / 1e9 - $unseen;
+            if ($remaining <= 0) {
                 try {
                     $this->delete();
                 } catch (ProblemException $e) {
@@ -53,8 +52,12 @@ final class Query
                 }
                 throw new TimeoutException("KataGo query {$this->id} did not finish in {$timeoutSeconds} seconds.");
             }
+            // Use the time that is left, and read once more at the deadline,
+            // so a query that finishes just in time is not thrown away.
+            $wait = min((float) ($current->retryAfter ?? 1), $remaining);
+            $before = hrtime(true);
             $this->http->sleep($wait);
-            $slept += $wait;
+            $unseen += max(0.0, $wait - (hrtime(true) - $before) / 1e9);
             $current = $this->get();
         }
 

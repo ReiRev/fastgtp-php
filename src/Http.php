@@ -57,10 +57,29 @@ final class Http
         return rawurlencode($id);
     }
 
-    /** @param array<string, mixed>|null $body */
-    public function json(string $method, string $path, ?array $body = null): mixed
+    /**
+     * @param array<string, mixed>|null $body
+     * @return array<string, mixed>
+     */
+    public function json(string $method, string $path, ?array $body = null): array
     {
-        return $this->send($method, $path, $body)[0];
+        return $this->jsonAndResponse($method, $path, $body)[0];
+    }
+
+    /**
+     * Send a request whose response must have a JSON object as its body.
+     *
+     * @param array<string, mixed>|null $body
+     * @return array{0: array<string, mixed>, 1: ResponseInterface}
+     */
+    public function jsonAndResponse(string $method, string $path, ?array $body = null): array
+    {
+        [$decoded, $response] = $this->send($method, $path, $body);
+        if (!is_array($decoded)) {
+            throw new ProblemException($response->getStatusCode(), 'about:blank', 'The response is not a JSON object');
+        }
+
+        return [$decoded, $response];
     }
 
     /**
