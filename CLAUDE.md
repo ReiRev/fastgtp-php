@@ -4,8 +4,7 @@ A PHP client for [fastgtp](https://github.com/ReiRev/fastgtp), an HTTP API for G
 
 ## Layout
 
-- `src/Client.php`: one method per fastgtp route, plus `analyze()`, which sends a KataGo query and waits for it.
-- `src/`: value classes for what the routes return, and `ProblemException` for error responses.
+- `src/Http.php`: internal; sends the requests and turns error responses into `ProblemException`.
 - `tests/Unit/`: tests against a fake PSR-18 client (`FakeHttp`).
 - `tests/Integration/`: tests against a running fastgtp server. `SpecCheckingHttp` checks every response against the server's `/openapi.json`.
 
