@@ -26,7 +26,7 @@ RUN curl -sfL -o /tmp/katago.zip "$KATAGO_URL" \
 
 # A fixed fastgtp release from PyPI, the package users install, so a new
 # release cannot change the results here. Raise it in a pull request.
-ARG FASTGTP_VERSION=0.1.0
+ARG FASTGTP_VERSION=0.2.0
 RUN pip install --no-cache-dir "fastgtp==${FASTGTP_VERSION}"
 
 COPY katago.toml /etc/fastgtp/katago.toml

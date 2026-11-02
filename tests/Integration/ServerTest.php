@@ -7,6 +7,7 @@ namespace FastGtp\Tests\Integration;
 use FastGtp\FastGtpClient;
 use FastGtp\Color;
 use FastGtp\FastGtpException;
+use FastGtp\KataGo\FailureReason;
 use FastGtp\KataGo\QueryStatus;
 use GuzzleHttp\Client as GuzzleClient;
 use PHPUnit\Framework\TestCase;
@@ -106,6 +107,7 @@ final class ServerTest extends TestCase
             $this->assertNotEmpty($response['moveInfos']);
         }
         $this->assertNotNull($result->finishedAt);
+        $this->assertNull($result->failureReason);
     }
 
     public function testKataGoRejectsAnIllegalMove(): void
@@ -114,6 +116,7 @@ final class ServerTest extends TestCase
 
         $this->assertSame(QueryStatus::Failed, $result->status);
         $this->assertSame('moves', $result->error['field']);
+        $this->assertSame(FailureReason::InvalidQuery, $result->failureReason);
     }
 
     public function testQueryFromIdAndDelete(): void
