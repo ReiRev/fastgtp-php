@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FastGtp\Tests\Unit\KataGo;
 
 use FastGtp\FastGtpException;
+use FastGtp\KataGo\FailureReason;
 use FastGtp\KataGo\KataGo;
 use FastGtp\KataGo\QueryStatus;
 use FastGtp\KataGo\TimeoutException;
@@ -62,6 +63,7 @@ final class QueriesTest extends TestCase
         $done = $katago->query('q1')->get();
         $this->assertTrue($done->isFinished());
         $this->assertNull($done->retryAfter);
+        $this->assertNull($done->failureReason);
         $this->assertSame(0.47, $done->responses[0]['rootInfo']['winrate']);
         $this->assertSame('2026-10-31T01:00:02.500+00:00', $done->finishedAt->format('Y-m-d\TH:i:s.vP'));
         $this->assertSame('/katago/default/queries/q1', $http->requests[2]->getUri()->getPath());
@@ -73,12 +75,16 @@ final class QueriesTest extends TestCase
             ->answer(201, self::query('QUEUED'), ['Retry-After' => '2'])
             ->answer(200, self::query('QUEUED'), ['Retry-After' => '2'])
             ->answer(200, self::query('RUNNING'), ['Retry-After' => '1'])
-            ->answer(200, self::query('FAILED', ['error' => ['error' => 'Illegal move 1: E5', 'field' => 'moves']]));
+            ->answer(200, self::query('FAILED', [
+                'error' => ['error' => 'Illegal move 1: E5', 'field' => 'moves'],
+                'failureReason' => 'INVALID_QUERY',
+            ]));
 
         $result = self::katago($http)->analyze(self::QUERY);
 
         $this->assertSame(QueryStatus::Failed, $result->status);
         $this->assertSame('moves', $result->error['field']);
+        $this->assertSame(FailureReason::InvalidQuery, $result->failureReason);
         // The wait asked for by the 201 comes before the first read.
         $this->assertSame([2.0, 2.0, 1.0], $http->sleeps);
         $this->assertSame('GET', $http->requests[3]->getMethod());
@@ -158,16 +164,33 @@ final class QueriesTest extends TestCase
         }
     }
 
+    public function testFailureReasonsThisClientDoesNotKnow(): void
+    {
+        $error = ['error' => ['error' => 'out of memory']];
+        $http = (new FakeHttp())
+            // A newer server may add reasons, and an older one sends none.
+            ->answer(200, self::query('FAILED', $error + ['failureReason' => 'OUT_OF_MEMORY']))
+            ->answer(200, self::query('FAILED', $error));
+        $query = self::katago($http)->query('q1');
+
+        foreach ([$query->get(), $query->get()] as $result) {
+            $this->assertSame(QueryStatus::Failed, $result->status);
+            $this->assertNull($result->failureReason);
+        }
+    }
+
     public function testBodyUnlikeFastgtps(): void
     {
         $http = (new FakeHttp())
             ->answer(201, ['id' => '..'])
             ->answer(200, self::query('DONE'))
             ->answer(200, self::query('RUNNING', ['createdAt' => 'yesterday-ish']))
-            ->answer(200, self::query('FAILED', ['error' => 'Illegal move']));
+            ->answer(200, self::query('FAILED', ['error' => 'Illegal move']))
+            ->answer(200, self::query('FAILED', ['error' => ['error' => 'Illegal move'], 'failureReason' => 1]));
         $katago = self::katago($http);
         $calls = [
             fn() => $katago->createQuery(self::QUERY),
+            fn() => $katago->query('q1')->get(),
             fn() => $katago->query('q1')->get(),
             fn() => $katago->query('q1')->get(),
             fn() => $katago->query('q1')->get(),

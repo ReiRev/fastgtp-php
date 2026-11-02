@@ -85,6 +85,8 @@ if ($result->status === QueryStatus::Succeeded) {
     echo $response['moveInfos'][0]['move'];
 } else {
     echo $result->error['error'];           // such as "Illegal move 1: E5"
+    // InvalidQuery fails again if sent again; KataGoError may not; TimedOut asks for fewer visits.
+    $reason = $result->failureReason;       // a FastGtp\KataGo\FailureReason, or null
 }
 ```
 

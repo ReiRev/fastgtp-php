@@ -25,6 +25,9 @@ final readonly class QueryResult
      * @param list<array<string, mixed>> $responses At most one per analyzed turn, in turn order.
      * @param list<array<string, mixed>> $warnings
      * @param array<string, mixed>|null $error Set only when the status is FAILED.
+     * @param FailureReason|null $failureReason Set only when the status is FAILED, and null
+     *     for a reason this client does not know, which a newer server may send, or from an
+     *     older server, which does not send it.
      * @param int|null $retryAfter Seconds to wait before reading it again, while it is not finished.
      */
     public function __construct(
@@ -38,6 +41,7 @@ final readonly class QueryResult
         public ?DateTimeImmutable $startedAt,
         public ?DateTimeImmutable $finishedAt,
         public ?int $retryAfter = null,
+        public ?FailureReason $failureReason = null,
     ) {}
 
     public function isFinished(): bool
@@ -68,6 +72,7 @@ final readonly class QueryResult
             $optional('startedAt') ? self::time($fields->string('startedAt')) : null,
             $optional('finishedAt') ? self::time($fields->string('finishedAt')) : null,
             HttpTransporter::retryAfter($response),
+            $optional('failureReason') ? FailureReason::tryFrom($fields->string('failureReason')) : null,
         );
     }
 
