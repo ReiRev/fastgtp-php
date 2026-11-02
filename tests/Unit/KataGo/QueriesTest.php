@@ -168,7 +168,7 @@ final class QueriesTest extends TestCase
     {
         $error = ['error' => ['error' => 'out of memory']];
         $http = (new FakeHttp())
-            // A newer server may add reasons, and one older than fastgtp 0.2.0 sends none.
+            // A newer server may add reasons, and an older one sends none.
             ->answer(200, self::query('FAILED', $error + ['failureReason' => 'OUT_OF_MEMORY']))
             ->answer(200, self::query('FAILED', $error));
         $query = self::katago($http)->query('q1');

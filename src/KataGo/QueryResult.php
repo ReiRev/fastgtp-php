@@ -26,8 +26,8 @@ final readonly class QueryResult
      * @param list<array<string, mixed>> $warnings
      * @param array<string, mixed>|null $error Set only when the status is FAILED.
      * @param FailureReason|null $failureReason Set only when the status is FAILED, and null
-     *     for a reason this client does not know, which a newer server may send, or from a
-     *     server older than fastgtp 0.2.0.
+     *     for a reason this client does not know, which a newer server may send, or from an
+     *     older server, which does not send it.
      * @param int|null $retryAfter Seconds to wait before reading it again, while it is not finished.
      */
     public function __construct(
